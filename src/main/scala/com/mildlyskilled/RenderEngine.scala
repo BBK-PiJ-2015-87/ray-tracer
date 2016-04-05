@@ -1,9 +1,15 @@
 package com.mildlyskilled
-
+import akka.actor.Actor
 /**
   * Created by vladimirsivanovs on 05/04/2016.
   */
-class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counter, val camera: Camera) {
+class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counter, val camera: Camera) extends Actor {
+
+  def receive = {
+    case Render(x, y) => {
+      traceImage(x, y)
+    }
+  }
 
   val objects = scene.objects
   val lights = scene.lights
@@ -22,43 +28,32 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
 
     val cosf = camera.cosF
     val sinf = camera.sinF
-
-    // Anti-aliasing parameter -- divide each pixel into sub-pixels and
-    // average the results to get smoother images.
     val aa = settings.antiAliasing
 
-    // TODO:
-    // Create a parallel version of this loop, creating one actor per pixel or per row of
-    // pixels.  Each actor should send the Coordinator messages to set the
-    // color of a pixel.  The actor need not receive any messages.
 
     for (y <- 0 until height) {
       for (x <- 0 until width) {
-
-        // This loop body can be sequential.
-        var initialColor = Colour.black
+        var resultColor = Colour.black
 
         for (dx <- 0 until aa) {
           for (dy <- 0 until aa) {
 
-            // Create a vector to the pixel on the view plane formed when
-            // the eye is at the origin and the normal is the Z-axis.
             val dir = Vector(
               (sinf * 2 * ((x + dx.toFloat / aa) / width - .5)).toFloat,
               (sinf * 2 * (height.toFloat / width) * (.5 - (y + dy.toFloat / aa) / height)).toFloat,
               cosf.toFloat).normalized
 
             val color = trace(Ray(origin, dir)) / (aa * aa)
-            initialColor += color
+            resultColor += color
           }
         }
 
-        if (Vector(initialColor.r, initialColor.g, initialColor.b).norm < 1)
+        if (Vector(resultColor.r, resultColor.g, resultColor.b).norm < 1)
           counter.darkCount += 1
-        if (Vector(initialColor.r, initialColor.g, initialColor.b).norm > 1)
+        if (Vector(resultColor.r, resultColor.g, resultColor.b).norm > 1)
           counter.lightCount += 1
 
-        Coordinator.set(x, y, initialColor)
+        sender ! Result(x, y, resultColor)
       }
     }
   }

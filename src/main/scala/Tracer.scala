@@ -1,3 +1,5 @@
+import akka.actor.{Props, ActorSystem}
+import akka.actor._
 import com.mildlyskilled._
 
 object Tracer extends App {
@@ -8,33 +10,15 @@ object Tracer extends App {
   val camera = new Camera
   val scene = Scene.fromFile(inFile)
 
-  val renderEngine = new RenderEngine(scene, settings, counter, camera)
-
   val image = new Image(settings.width, settings.height)
 
-
-  render(scene, outFile, settings)
-
-  println("rays cast " + counter.rayCount)
-  println("rays hit " + counter.hitCount)
-  println("light " + counter.lightCount)
-  println("dark " + counter.darkCount)
-
-  def render(scene: Scene, outfile: String, renderSettings: Settings) = {
+  val workers = 10
 
 
-    // Init the coordinator -- must be done before starting it.
-    Coordinator.init(image, outfile)
+  val system = ActorSystem("RenderSystem")
 
-    // TODO: Start the Coordinator actor.
+  val coordinator = system.actorOf(Props(new Coordinator(workers, image, outFile, scene, settings, counter, camera)), name = "coordinator")
 
-    renderEngine.render()
-
-    // TODO:
-    // This one is tricky--we can't simply send a message here to print
-    // the image, since the actors started by traceImage haven't necessarily
-    // finished yet.  Maybe print should be called elsewhere?
-    Coordinator.print
-  }
+  coordinator ! Render
 
 }

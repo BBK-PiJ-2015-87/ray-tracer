@@ -1,31 +1,43 @@
 package com.mildlyskilled
 
-/**
-  * TODO
-  * Make this an actor and write a message handler for at least the
-  * set method.
-  */
+import akka.actor.{Actor, Props}
+import akka.routing.RoundRobinPool
 
-object Coordinator {
-  def init(image: Image, file: String) = {
-    renderedImage = image
-    outputFile = file
-    pixelsLeft = image.width * image.height
+
+class Coordinator(workers: Int, image: Image, outFile: String, scene: Scene, settings: Settings, counter: Counter, camera: Camera) extends Actor {
+
+  var waiting = image.width * image.height
+
+//  val renderNodesRouter = context.actorOf(Props(new RenderEngine(scene, settings, counter, camera)).withRouter(RoundRobinPool(workers)), name = "renderNodes")
+  val renderNodesRouter = context.actorOf(Props(new RenderEngine(scene, settings, counter, camera)), name = "renderNodes")
+
+  def receive = {
+    case Render =>
+//      for (i <- 0 until image.height) renderNodesRouter ! Render(image.width, i)
+      renderNodesRouter ! Render(image.width, image.height)
+
+    case Result(x, y, c) =>
+      set(x, y, c)
+      if (waiting == 0) {
+        println("rays cast " + counter.rayCount)
+        println("rays hit " + counter.hitCount)
+        println("light " + counter.lightCount)
+        println("dark " + counter.darkCount)
+
+        print
+        println("Image printed out")
+        context.system.shutdown()
+        context stop self
+      }
   }
 
-  // Number of pixels we're waiting for to be set.
-  var pixelsLeft = 0
-  var outputFile: String = null
-  var renderedImage: Image = null
-
-  // TODO: make set a message
   def set(x: Int, y: Int, c: Colour) = {
-    renderedImage(x, y) = c
-    pixelsLeft -= 1
+    image(x, y) = c
+    waiting -= 1
   }
 
   def print = {
-    assert(pixelsLeft == 0)
-    renderedImage.print(outputFile)
+    assert(waiting == 0)
+    image.print(outFile)
   }
 }
