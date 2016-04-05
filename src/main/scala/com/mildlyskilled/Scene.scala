@@ -44,24 +44,24 @@ class Scene private(val objects: List[Shape], val lights: List[Light]) {
 
   private def this(p: (List[Shape], List[Light])) = this(p._1, p._2)
 
-  val t = new Trace
-  val ambient = .2f
-  val background = Colour.black
+  val camera = new Camera
+  val settings = new Settings
+  val counter = new Counter
 
-  val eye = Vector.origin
-  val angle = 90f // viewing angle
-  //val angle = 180f // fisheye
+  val ambient = settings.ambient
+  val background = settings.backgroundColor
+
+  val origin = camera.position
+  val viewAngle = camera.viewAngle
 
   def traceImage(width: Int, height: Int) {
 
-    val frustum = (.5 * angle * math.Pi / 180).toFloat
-
-    val cosf = math.cos(frustum)
-    val sinf = math.sin(frustum)
+    val cosf = camera.cosF
+    val sinf = camera.sinF
 
     // Anti-aliasing parameter -- divide each pixel into sub-pixels and
     // average the results to get smoother images.
-    val ss = t.AntiAliasingFactor
+    val aa = settings.antiAliasing
 
     // TODO:
     // Create a parallel version of this loop, creating one actor per pixel or per row of
@@ -72,29 +72,29 @@ class Scene private(val objects: List[Shape], val lights: List[Light]) {
       for (x <- 0 until width) {
 
         // This loop body can be sequential.
-        var colour = Colour.black
+        var initialColor = Colour.black
 
-        for (dx <- 0 until ss) {
-          for (dy <- 0 until ss) {
+        for (dx <- 0 until aa) {
+          for (dy <- 0 until aa) {
 
             // Create a vector to the pixel on the view plane formed when
             // the eye is at the origin and the normal is the Z-axis.
             val dir = Vector(
-              (sinf * 2 * ((x + dx.toFloat / ss) / width - .5)).toFloat,
-              (sinf * 2 * (height.toFloat / width) * (.5 - (y + dy.toFloat / ss) / height)).toFloat,
+              (sinf * 2 * ((x + dx.toFloat / aa) / width - .5)).toFloat,
+              (sinf * 2 * (height.toFloat / width) * (.5 - (y + dy.toFloat / aa) / height)).toFloat,
               cosf.toFloat).normalized
 
-            val c = trace(Ray(eye, dir)) / (ss * ss)
-            colour += c
+            val color = trace(Ray(origin, dir)) / (aa * aa)
+            initialColor += color
           }
         }
 
-        if (Vector(colour.r, colour.g, colour.b).norm < 1)
-          t.darkCount += 1
-        if (Vector(colour.r, colour.g, colour.b).norm > 1)
-          t.lightCount += 1
+        if (Vector(initialColor.r, initialColor.g, initialColor.b).norm < 1)
+          counter.darkCount += 1
+        if (Vector(initialColor.r, initialColor.g, initialColor.b).norm > 1)
+          counter.lightCount += 1
 
-        Coordinator.set(x, y, colour)
+        Coordinator.set(x, y, initialColor)
       }
     }
   }
@@ -175,7 +175,7 @@ class Scene private(val objects: List[Shape], val lights: List[Light]) {
   def trace(ray: Ray): Colour = trace(ray, maxDepth)
 
   private def trace(ray: Ray, depth: Int): Colour = {
-    t.rayCount += 1
+    counter.rayCount += 1
 
     // Compute the intersections of the ray with every object, sort by
     // distance from the ray's origin and pick the closest to the origin.
@@ -189,7 +189,7 @@ class Scene private(val objects: List[Shape], val lights: List[Light]) {
       case Some((v, o)) => {
         // Compute the color as the sum of:
 
-        t.hitCount += 1
+        counter.hitCount += 1
 
         // The contribution of each point light source.
         var c = lights.foldLeft(Colour.black) {

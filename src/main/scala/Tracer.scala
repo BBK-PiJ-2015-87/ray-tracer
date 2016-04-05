@@ -1,18 +1,20 @@
 import java.io.File
 
-import com.mildlyskilled.{Scene, Image, Coordinator, Trace}
+import com.mildlyskilled.{Scene, Image, Coordinator, Settings}
 
 object Tracer extends App {
 
-  val (infile, outfile) = ("src/main/resources/input.dat", "output.png")
-  val scene = Scene.fromFile(infile)
-  val t = new Trace
-  render(scene, outfile, t.Width, t.Height)
+  val (inFile, outFile) = ("src/main/resources/input.dat", "output.png")
+  val scene = Scene.fromFile(inFile)
+  val counter = scene.counter
+  val settings = scene.settings
 
-  println("rays cast " + t.rayCount)
-  println("rays hit " + t.hitCount)
-  println("light " + t.lightCount)
-  println("dark " + t.darkCount)
+  render(scene, outFile, settings.width, settings.height)
+
+  println("rays cast " + counter.rayCount)
+  println("rays hit " + counter.hitCount)
+  println("light " + counter.lightCount)
+  println("dark " + counter.darkCount)
 
   def render(scene: Scene, outfile: String, width: Int, height: Int) = {
     val image = new Image(width, height)

@@ -5,16 +5,17 @@ class Image (val width: Int, val height: Int){
   import java.io.File
   import javax.imageio.ImageIO
 
-  val im = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+  val image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
 
-  def apply(x: Int, y: Int) = Colour.fromRGB(im.getRGB(x, y))
+  def apply(xPos: Int, yPos: Int) = Colour.fromRGB(image.getRGB(xPos, yPos))
 
-  def update(x: Int, y: Int, c: Colour) = {
-    im.setRGB(x, y, c.rgb)
+  def update(xPos: Int, yPos: Int, color: Colour) = {
+    image.setRGB(xPos, yPos, color.rgb)
   }
 
   def print(file: String) = {
-    val f = new File(file)
-    ImageIO.write(im, "png", f)
+    val outFile = new File(file)
+    val fileFormat = "png"
+    ImageIO.write(image, fileFormat, outFile)
   }
 }
