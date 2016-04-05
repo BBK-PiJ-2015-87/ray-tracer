@@ -6,8 +6,8 @@ import akka.actor.Actor
 class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counter, val camera: Camera) extends Actor {
 
   def receive = {
-    case Render(x, y) => {
-      traceImage(x, y)
+    case Render(startY, endY , id) => {
+      traceImage(startY, endY, id)
     }
   }
 
@@ -19,19 +19,21 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
 
   val origin = camera.position
   val viewAngle = camera.viewAngle
+  val cosf = camera.cosF
+  val sinf = camera.sinF
+  val aa = settings.antiAliasing
 
-  def render() {
-    traceImage(settings.width, settings.height)
-  }
-
-  def traceImage(width: Int, height: Int) {
-
-    val cosf = camera.cosF
-    val sinf = camera.sinF
-    val aa = settings.antiAliasing
+  val width = settings.width
+  val height = settings.height
 
 
-    for (y <- 0 until height) {
+
+  def traceImage(startY: Int, endY: Int, id: Int) {
+
+  println("Render Node Number " + id + " started")
+
+
+    for (y <- startY until endY) {
       for (x <- 0 until width) {
         var resultColor = Colour.black
 
@@ -56,6 +58,7 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
         sender ! Result(x, y, resultColor)
       }
     }
+    println("Render Node Number " + id + " finished")
   }
 
   def shadow(ray: Ray, l: Light): Boolean = {

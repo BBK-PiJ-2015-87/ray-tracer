@@ -8,16 +8,20 @@ class Coordinator(workers: Int, image: Image, outFile: String, scene: Scene, set
 
   var waiting = image.width * image.height
 
-//  val renderNodesRouter = context.actorOf(Props(new RenderEngine(scene, settings, counter, camera)).withRouter(RoundRobinPool(workers)), name = "renderNodes")
-  val renderNodesRouter = context.actorOf(Props(new RenderEngine(scene, settings, counter, camera)), name = "renderNodes")
+  val renderNodesRouter = context.actorOf(Props(new RenderEngine(scene, settings, counter, camera)).withRouter(RoundRobinPool(workers)), name = "renderNodes")
+  val interval = 10;
+
+  //helper lists for rendering segments
+  val startOfSegments = for (i <- 0 to image.height by interval) yield i
+  val endOfSegments = startOfSegments.tail
+
 
   def receive = {
     case Render =>
-//      for (i <- 0 until image.height) renderNodesRouter ! Render(image.width, i)
-      renderNodesRouter ! Render(image.width, image.height)
+      for (i <- 0 until endOfSegments.length) renderNodesRouter ! Render(startOfSegments(i), endOfSegments(i), i)
 
-    case Result(x, y, c) =>
-      set(x, y, c)
+    case Result(xPos, yPos, ccolor) =>
+      set(xPos, yPos, ccolor)
       if (waiting == 0) {
         println("rays cast " + counter.rayCount)
         println("rays hit " + counter.hitCount)
@@ -31,8 +35,8 @@ class Coordinator(workers: Int, image: Image, outFile: String, scene: Scene, set
       }
   }
 
-  def set(x: Int, y: Int, c: Colour) = {
-    image(x, y) = c
+  def set(xPos: Int, yPos: Int, color: Colour) = {
+    image(xPos, yPos) = color
     waiting -= 1
   }
 
