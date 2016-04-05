@@ -12,13 +12,10 @@ object Tracer extends App {
 
   val image = new Image(settings.width, settings.height)
 
-  val workers = 10
-
-
   val system = ActorSystem("RenderSystem")
 
-  val coordinator = system.actorOf(Props(new Coordinator(workers, image, outFile, scene, settings, counter, camera)), name = "coordinator")
+  val coordinator = system.actorOf(Props(new Coordinator(image, outFile, scene, settings, counter, camera)), name = "coordinator")
 
-  coordinator ! Render
+  coordinator ! Start
 
 }

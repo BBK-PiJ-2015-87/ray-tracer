@@ -6,11 +6,8 @@ package com.mildlyskilled
 class Camera {
   val position = Vector.origin
   val viewAngle = 90f // viewing angle
-  //val angle = 180f // fisheye
 
   val frustum = (.5 * viewAngle * math.Pi / 180).toFloat
-
   val cosF = math.cos(frustum)
   val sinF = math.sin(frustum)
-
 }

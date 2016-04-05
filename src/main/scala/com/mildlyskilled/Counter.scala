@@ -8,5 +8,4 @@ class Counter {
   var hitCount = 0
   var lightCount = 0
   var darkCount = 0
-
 }

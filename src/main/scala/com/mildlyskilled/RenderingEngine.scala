@@ -3,7 +3,14 @@ import akka.actor.Actor
 /**
   * Created by vladimirsivanovs on 05/04/2016.
   */
-class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counter, val camera: Camera) extends Actor {
+class RenderingEngine(val scene: Scene, val settings: Settings, val counter: Counter, val camera: Camera) extends Actor {
+
+  val objects = scene.objects
+  val lights = scene.lights
+
+  val aa = settings.antiAliasing
+  val width = settings.width
+  val height = settings.height
 
   def receive = {
     case Render(startY, endY , id) => {
@@ -11,27 +18,9 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
     }
   }
 
-  val objects = scene.objects
-  val lights = scene.lights
-
-  val ambient = settings.ambient
-  val background = settings.backgroundColor
-
-  val origin = camera.position
-  val viewAngle = camera.viewAngle
-  val cosf = camera.cosF
-  val sinf = camera.sinF
-  val aa = settings.antiAliasing
-
-  val width = settings.width
-  val height = settings.height
-
-
-
   def traceImage(startY: Int, endY: Int, id: Int) {
 
-  println("Render Node Number " + id + " started")
-
+  println("Render Node " + id + " started")
 
     for (y <- startY until endY) {
       for (x <- 0 until width) {
@@ -41,11 +30,11 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
           for (dy <- 0 until aa) {
 
             val dir = Vector(
-              (sinf * 2 * ((x + dx.toFloat / aa) / width - .5)).toFloat,
-              (sinf * 2 * (height.toFloat / width) * (.5 - (y + dy.toFloat / aa) / height)).toFloat,
-              cosf.toFloat).normalized
+              (camera.sinF * 2 * ((x + dx.toFloat / aa) / width - .5)).toFloat,
+              (camera.sinF * 2 * (height.toFloat / width) * (.5 - (y + dy.toFloat / aa) / height)).toFloat,
+              camera.cosF.toFloat).normalized
 
-            val color = trace(Ray(origin, dir)) / (aa * aa)
+            val color = trace(Ray(camera.position, dir)) / (aa * aa)
             resultColor += color
           }
         }
@@ -58,7 +47,7 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
         sender ! Result(x, y, resultColor)
       }
     }
-    println("Render Node Number " + id + " finished")
+    println("Render Node " + id + " finished")
   }
 
   def shadow(ray: Ray, l: Light): Boolean = {
@@ -146,7 +135,7 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
     r match {
       case None => {
         // If no intersection, the color is black
-        background
+        settings.backgroundColor
       }
       case Some((v, o)) => {
         // Compute the color as the sum of:
@@ -159,7 +148,7 @@ class RenderEngine(val scene: Scene, val settings: Settings, val counter: Counte
         }
 
         // The contribution of the ambient light.
-        c += o.colour * ambient
+        c += o.colour * settings.ambient
 
         // Return the color.
         c
